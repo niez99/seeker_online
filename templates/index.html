@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Lokasi Anda</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css"/>
+    <style>
+        #map { height: 500px; width: 100%; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2>Deteksi Lokasi Anda</h2>
+    <p>Jika diizinkan, kami akan mengambil lokasi GPS Anda. Jika tidak, menggunakan IP address.</p>
+
+    <div id="info"></div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script>
+        // Data lokasi IP yang dikirim dari Flask
+        const ipLocation = {
+            latitude: {{ ip_location.latitude }},
+            longitude: {{ ip_location.longitude }},
+            city: "{{ ip_location.city }}",
+            region: "{{ ip_location.region }}",
+            country: "{{ ip_location.country }}"
+        };
+
+        // Membuat peta awal berdasarkan IP
+        let map = L.map('map').setView([ipLocation.latitude, ipLocation.longitude], 12);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data © OpenStreetMap contributors'
+        }).addTo(map);
+
+        let marker = L.marker([ipLocation.latitude, ipLocation.longitude]).addTo(map)
+            .bindPopup(`Lokasi berdasarkan IP: ${ipLocation.city}, ${ipLocation.region}`)
+            .openPopup();
+
+        document.getElementById('info').innerHTML = `
+            <strong>Lokasi dari IP:</strong><br>
+            Kota: ${ipLocation.city}<br>
+            Wilayah: ${ipLocation.region}<br>
+            Negara: ${ipLocation.country}
+        `;
+
+        // Coba ambil lokasi GPS asli
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                map.setView([lat, lon], 14);
+
+                // Hapus marker IP dan ganti dengan marker GPS
+                marker.setLatLng([lat, lon])
+                    .setPopupContent("Lokasi berdasarkan GPS (akurasi lebih tinggi)")
+                    .openPopup();
+
+                document.getElementById('info').innerHTML = `
+                    <strong>Lokasi dari GPS:</strong><br>
+                    Latitude: ${lat}<br>
+                    Longitude: ${lon}<br>
+                    <a href="https://www.google.com/maps?q=${lat},${lon}" target="_blank">Lihat di Google Maps</a>
+                `;
+            }, function(error) {
+                console.log("GPS tidak tersedia atau ditolak, menggunakan IP.");
+            });
+        } else {
+            console.log("Geolocation tidak didukung browser.");
+        }
+    </script>
+</body>
+</html>
